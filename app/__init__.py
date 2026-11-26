@@ -33,7 +33,7 @@ def create_app():
     @app.cli.command("seed")
     def seed():
         """Create tables, the admin user and the menu from menu.csv."""
-        from .models import User
+        from .models import User, MenuItem
         from .services import MenuService
         db.create_all()
         email = os.environ["ADMIN_EMAIL"]
@@ -41,8 +41,9 @@ def create_app():
             u = User(name="Admin", email=email, role="admin")
             u.set_password(os.environ["ADMIN_PASSWORD"])
             db.session.add(u)
-        with open(os.path.join(os.path.dirname(__file__), "..", "menu.csv"), encoding="utf-8") as f:
-            click.echo(f"menu rows: {MenuService().import_csv(f.read())}")
+        if not MenuItem.query.first():   # first boot only: never overwrite live prices/stock on restart
+            with open(os.path.join(os.path.dirname(__file__), "..", "menu.csv"), encoding="utf-8") as f:
+                click.echo(f"menu rows: {MenuService().import_csv(f.read())}")
         db.session.commit()
 
     return app
