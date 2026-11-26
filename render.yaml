@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: outlet451
+    name: theoutlet451
     runtime: docker
     plan: free
     healthCheckPath: /healthz
