@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Outlet 451</title>
+<style>
+  :root { --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff; --blue:#2748d4; --red:#b91c1c; --green:#047857; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:var(--bg); }
+  header { display:flex; justify-content:space-between; align-items:center; padding:16px 24px; background:#fff; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:18px; letter-spacing:.18em; text-transform:uppercase; }
+  header a { color:var(--blue); text-decoration:none; font-weight:600; }
+  main { max-width:960px; margin:0 auto; padding:20px 16px 60px; }
+  nav { display:flex; gap:8px; margin-bottom:20px; }
+  nav button { flex:1; padding:10px; border:1px solid var(--line); background:#fff; border-radius:10px; font:inherit; font-weight:600; color:var(--muted); cursor:pointer; }
+  nav button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .card h2 { margin:0 0 4px; font-size:17px; }
+  .sub { color:var(--muted); font-size:14px; margin:0 0 12px; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+  .row:first-of-type { border-top:0; }
+  code { font-size:12px; background:#f3f4f6; padding:2px 6px; border-radius:6px; color:#374151; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+  .chip { font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; background:#eef2ff; color:#3730a3; }
+  .chip.none { background:#f3f4f6; color:var(--muted); }
+  .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; background:#e0f2fe; color:#075985; margin-left:8px; text-transform:uppercase; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:6px 16px; margin:10px 0; }
+  .grid h4 { grid-column:1/-1; margin:10px 0 0; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  label.perm { display:flex; gap:8px; align-items:flex-start; font-size:14px; }
+  label.perm input { margin-top:3px; width:18px; height:18px; }
+  input[type=text], select { font:inherit; padding:9px 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; }
+  .btn { font:inherit; font-weight:600; padding:9px 16px; border-radius:8px; border:1px solid var(--blue); background:var(--blue); color:#fff; cursor:pointer; }
+  .btn.ghost { background:#fff; color:var(--blue); }
+  .btn.danger { background:#fff; color:var(--red); border-color:var(--red); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); padding:10px 16px; border-radius:10px; color:#fff; font-weight:600; display:none; max-width:90vw; }
+  #toast.ok { background:var(--green); } #toast.err { background:var(--red); }
+  table { width:100%; border-collapse:collapse; } th { text-align:left; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  th, td { padding:10px 6px; border-top:1px solid var(--line); } thead th { border-top:0; }
+  .wrap { overflow-x:auto; }
+</style>
+</head>
+<body>
+<header><h1>Outlet 451 · Admin</h1><a href="/">Back to menu</a></header>
+<main>
+  <nav id="tabs">
+    <button data-tab="users" class="on">Users</button>
+    <button data-tab="roles">Roles</button>
+    <button data-tab="features">Features</button>
+  </nav>
+  <div id="view"></div>
+</main>
+<div id="toast"></div>
+
+<script>
+const view = document.getElementById("view");
+let state = { tab: "users", features: [], roles: [], users: [] };
+
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (["checked", "disabled", "value", "selected"].includes(k)) e[k] = v;
+    else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+
+function toast(msg, ok = true) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = ok ? "ok" : "err"; t.style.display = "block";
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.style.display = "none"), 3500);
+}
+
+async function api(path, method = "GET", body) {
+  const headers = { "Content-Type": "application/json" };
+  // If your login stores a token in localStorage, it is sent here. Rename "token" if yours differs.
+  const token = localStorage.getItem("token");
+  if (token) headers.Authorization = "Bearer " + token;
+  const res = await fetch(path, { method, headers, credentials: "same-origin", body: body ? JSON.stringify(body) : undefined });
+  let data = null;
+  try { data = await res.json(); } catch (_) {}
+  if (!res.ok) {
+    const err = new Error((data && data.error) || "Request failed (" + res.status + ")");
+    err.status = res.status; throw err;
+  }
+  return data;
+}
+
+// A grid of feature checkboxes grouped by category. get() returns the ticked keys.
+function permGrid(selected, locked) {
+  const boxes = [];
+  const grid = el("div", { class: "grid" });
+  for (const g of state.features) {
+    grid.append(el("h4", {}, g.group));
+    for (const f of g.features) {
+      const cb = el("input", { type: "checkbox", checked: selected.has(f.key), disabled: locked });
+      cb.dataset.key = f.key; boxes.push(cb);
+      grid.append(el("label", { class: "perm" }, cb, el("span", {}, f.label, " ", el("code", {}, f.key))));
+    }
+  }
+  return { node: grid, get: () => boxes.filter(b => b.checked).map(b => b.dataset.key) };
+}
+
+function renderFeatures() {
+  view.replaceChildren(...state.features.map(g =>
+    el("div", { class: "card" },
+      el("h2", {}, g.group),
+      ...g.features.map(f => el("div", { class: "row" },
+        el("div", {}, f.label, el("br"), el("code", {}, f.key)),
+        el("div", { class: "chips" }, f.roles.length ? f.roles.map(r => el("span", { class: "chip" }, r)) : el("span", { class: "chip none" }, "no role")))))));
+}
+
+function renderRoles() {
+  const nameInput = el("input", { type: "text", placeholder: "e.g. supervisor", maxlength: "30" });
+  const newGrid = permGrid(new Set(["menu:read"]), false);
+  const create = el("div", { class: "card" },
+    el("h2", {}, "Create a role"),
+    el("p", { class: "sub" }, "Name it, then tick the features it should have."),
+    nameInput, newGrid.node,
+    el("div", { class: "actions" }, el("button", { class: "btn", onclick: async () => {
+      try {
+        await api("/api/admin/roles", "POST", { name: nameInput.value, permissions: newGrid.get() });
+        toast("Role created"); await load(); 
+      } catch (e) { toast(e.message, false); }
+    } }, "Create role")));
+
+  const cards = state.roles.map(r => {
+    const locked = r.name === "admin";
+    const grid = permGrid(new Set(r.permissions), locked);
+    const actions = el("div", { class: "actions" });
+    if (!locked) actions.append(el("button", { class: "btn", onclick: async () => {
+      try { await api("/api/admin/roles/" + r.name, "PUT", { permissions: grid.get() }); toast("Saved " + r.name); await load(); }
+      catch (e) { toast(e.message, false); }
+    } }, "Save changes"));
+    if (!r.builtin) actions.append(el("button", { class: "btn danger", onclick: async () => {
+      if (!confirm("Delete the role " + r.name + "?")) return;
+      try { await api("/api/admin/roles/" + r.name, "DELETE"); toast("Deleted " + r.name); await load(); }
+      catch (e) { toast(e.message, false); }
+    } }, "Delete"));
+    return el("div", { class: "card" },
+      el("h2", {}, r.name, r.builtin ? el("span", { class: "badge" }, "built-in") : null),
+      el("p", { class: "sub" }, r.users + (r.users === 1 ? " user" : " users") + (locked ? " · always has every feature" : "")),
+      grid.node, actions);
+  });
+  view.replaceChildren(create, ...cards);
+}
+
+function renderUsers() {
+  const rows = state.users.map(u => {
+    const sel = el("select", {}, ...state.roles.map(r => el("option", { value: r.name, selected: r.name === u.role }, r.name)));
+    sel.addEventListener("change", async () => {
+      try { await api("/api/admin/users/" + u.id + "/role", "PATCH", { role: sel.value }); u.role = sel.value; toast(u.name + " is now " + sel.value); await load(); }
+      catch (e) { sel.value = u.role; toast(e.message, false); }
+    });
+    return el("tr", {}, el("td", {}, String(u.id)), el("td", {}, u.name), el("td", {}, sel));
+  });
+  view.replaceChildren(el("div", { class: "card" },
+    el("h2", {}, "Users"), el("p", { class: "sub" }, "Pick a role from the list to change what a person can do."),
+    el("div", { class: "wrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, el("th", {}, "ID"), el("th", {}, "Name"), el("th", {}, "Role"))),
+      el("tbody", {}, rows)))));
+}
+
+function render() {
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === state.tab));
+  ({ users: renderUsers, roles: renderRoles, features: renderFeatures })[state.tab]();
+}
+
+async function load() {
+  try {
+    const [features, roles, users] = await Promise.all([
+      api("/api/admin/features"), api("/api/admin/roles"), api("/api/admin/users")]);
+    Object.assign(state, { features, roles, users });
+    render();
+  } catch (e) {
+    const msg = e.status === 401 ? "Please log in first, then reload this page."
+      : e.status === 403 ? "Your account does not have admin access."
+      : e.message;
+    view.replaceChildren(el("div", { class: "card" }, el("h2", {}, "Cannot open admin"), el("p", { class: "sub" }, msg)));
+  }
+}
+
+document.getElementById("tabs").addEventListener("click", e => {
+  if (e.target.dataset.tab) { state.tab = e.target.dataset.tab; render(); }
+});
+load();
+</script>
+</body>
+</html>

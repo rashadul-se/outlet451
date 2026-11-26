@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff · Outlet 451</title>
+<style>
+  :root { --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --blue:#2748d4; --red:#b91c1c; --green:#047857; --amber:#b45309; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  header { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:center; padding:14px 20px; background:#fff; border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:18px; letter-spacing:.18em; text-transform:uppercase; }
+  .who { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .who a { color:var(--blue); text-decoration:none; font-weight:600; font-size:14px; }
+  .role { font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; background:#e0e7ff; color:#3730a3; text-transform:uppercase; }
+  main { max-width:1100px; margin:0 auto; padding:18px 14px 60px; }
+  nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  nav button { padding:10px 16px; border:1px solid var(--line); background:#fff; border-radius:10px; font:inherit; font-weight:600; color:var(--muted); cursor:pointer; }
+  nav button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .card h2 { margin:0 0 6px; font-size:17px; } .sub { color:var(--muted); font-size:14px; margin:0 0 12px; }
+  .board { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; }
+  .col h3 { margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .col .count { background:#eef2ff; color:#3730a3; border-radius:999px; padding:1px 8px; margin-left:6px; font-size:12px; }
+  .order { background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; }
+  .order .top { display:flex; justify-content:space-between; font-weight:700; }
+  .order .meta { color:var(--muted); font-size:13px; margin:2px 0 6px; } .order ul { margin:0 0 10px; padding-left:18px; }
+  .btn { font:inherit; font-weight:600; padding:9px 14px; border-radius:8px; border:1px solid var(--blue); background:var(--blue); color:#fff; cursor:pointer; }
+  .btn.small { padding:6px 10px; font-size:14px; } .btn.ghost { background:#fff; color:var(--blue); } .btn.block { width:100%; }
+  .btn:disabled { opacity:.5; }
+  input, select, textarea { font:inherit; padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; max-width:100%; }
+  input.n { width:90px; } textarea { width:100%; min-height:90px; font-family:ui-monospace,monospace; font-size:13px; }
+  .wrap { overflow-x:auto; } table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  th, td { padding:9px 6px; border-top:1px solid var(--line); vertical-align:middle; } thead th { border-top:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:10px 0; }
+  .stat { border:1px solid var(--line); border-radius:10px; padding:10px 12px; } .stat b { display:block; font-size:20px; }
+  .stat span { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+  .good { color:var(--green); } .bad { color:var(--red); }
+  .form { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .kv { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px solid var(--line); font-size:15px; }
+  .kv.sub2 { padding-left:16px; color:var(--muted); } .kv:first-of-type { border-top:0; }
+  #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); padding:10px 16px; border-radius:10px; color:#fff; font-weight:600; display:none; max-width:90vw; z-index:9; }
+  #toast.ok { background:var(--green); } #toast.err { background:var(--red); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Outlet 451 · Staff</h1>
+  <div class="who" id="who"></div>
+</header>
+<main>
+  <nav id="tabs"></nav>
+  <div id="view"></div>
+</main>
+<div id="toast"></div>
+
+<script>
+const view = document.getElementById("view");
+let me = null, tab = null, timer = null;
+
+const $ = (tag, props = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (["checked", "disabled", "value", "selected"].includes(k)) e[k] = v;
+    else e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+};
+const can = p => me.permissions.includes(p);
+const money = n => "$" + Number(n).toFixed(2);
+
+function toast(msg, ok = true) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = ok ? "ok" : "err"; t.style.display = "block";
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.style.display = "none"), 3500);
+}
+
+async function api(path, method = "GET", body) {
+  const headers = { "Content-Type": "application/json" };
+  // If your login keeps a token in localStorage, it is sent here. Rename "token" if yours differs.
+  const token = localStorage.getItem("token");
+  if (token) headers.Authorization = "Bearer " + token;
+  const res = await fetch(path, { method, headers, credentials: "same-origin", body: body ? JSON.stringify(body) : undefined });
+  let data = null; try { data = await res.json(); } catch (_) {}
+  if (!res.ok) { const e = new Error((data && data.error) || "Request failed (" + res.status + ")"); e.status = res.status; throw e; }
+  return data;
+}
+const act = async (fn, okMsg) => { try { const r = await fn(); if (okMsg) toast(okMsg); return r; } catch (e) { toast(e.message, false); } };
+
+/* ---------- Orders board ---------- */
+const NEXT = { placed: ["preparing", "Start preparing"], preparing: ["ready", "Mark ready"], ready: ["completed", "Complete"] };
+async function renderOrders() {
+  let orders;
+  try { orders = await api("/api/staff/orders"); } catch (e) { return toast(e.message, false); }
+  const cols = ["placed", "preparing", "ready", "completed"].map(status => {
+    const list = orders.filter(o => o.status === status).slice(0, status === "completed" ? 8 : 40);
+    return $("div", { class: "col" },
+      $("h3", {}, status, $("span", { class: "count" }, String(list.length))),
+      ...list.map(o => $("div", { class: "order" },
+        $("div", { class: "top" }, $("span", {}, "#" + o.id), $("span", {}, money(o.total))),
+        $("div", { class: "meta" }, new Date(o.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " · " + o.method + " · customer " + o.customer),
+        $("ul", {}, o.items.map(i => $("li", {}, i.qty + " × " + i.name))),
+        can("order:advance") && NEXT[o.status] ? $("button", { class: "btn block", onclick: async () => {
+          await act(() => api("/api/staff/orders/" + o.id + "/advance", "POST"));
+          renderOrders();
+        } }, NEXT[o.status][1]) : null)));
+  });
+  view.replaceChildren($("div", { class: "board" }, cols));
+}
+
+/* ---------- Menu and stock ---------- */
+async function renderMenu() {
+  const items = await act(() => api("/api/staff/menu")); if (!items) return;
+  const rows = items.map(m => {
+    const qty = $("input", { class: "n", type: "number", value: "10" });
+    const price = $("input", { class: "n", type: "number", step: "0.01", value: String(m.price) });
+    const disc = $("input", { class: "n", type: "number", min: "0", max: "100", value: String(m.discount_pct) });
+    const active = $("input", { type: "checkbox", checked: m.active });
+    return $("tr", {},
+      $("td", {}, m.name, $("div", { class: "sub" }, m.category)),
+      can("menu:write") ? [$("td", {}, price), $("td", {}, disc), $("td", {}, active),
+        $("td", {}, $("button", { class: "btn small", onclick: async () => {
+          await act(() => api("/api/staff/menu/" + m.id, "PATCH", { price: price.value, discount_pct: disc.value, active: active.checked }), "Saved " + m.name);
+        } }, "Save"))] : [$("td", {}, money(m.price)), $("td", {}, m.discount_pct + "%"), $("td", {}, m.active ? "Yes" : "No"), $("td")],
+      $("td", { class: "stock" }, String(m.stock)),
+      can("menu:restock") ? $("td", {}, $("div", { class: "form" }, qty, $("button", { class: "btn small ghost", onclick: async () => {
+        const r = await act(() => api("/api/staff/menu/" + m.id + "/restock", "POST", { qty: Number(qty.value) }), "Stock updated");
+        if (r) renderMenu();
+      } }, "Add stock"))) : $("td"));
+  });
+  const csv = $("textarea", { placeholder: "name,category,description,price,discount_pct,stock" });
+  view.replaceChildren(
+    $("div", { class: "card" }, $("h2", {}, "Menu and stock"),
+      $("div", { class: "wrap" }, $("table", {},
+        $("thead", {}, $("tr", {}, ["Item", "Price", "Discount %", "Active", "", "Stock", ""].map(h => $("th", {}, h)))),
+        $("tbody", {}, rows)))),
+    can("menu:import") ? $("div", { class: "card" }, $("h2", {}, "Import from CSV"),
+      $("p", { class: "sub" }, "Existing items are matched by name and updated."), csv,
+      $("div", { style: "margin-top:8px" }, $("button", { class: "btn", onclick: async () => {
+        const r = await act(() => api("/api/staff/menu/import", "POST", { csv: csv.value }));
+        if (r) { toast("Imported " + r.imported + " items"); renderMenu(); }
+      } }, "Import"))) : null);
+}
+
+/* ---------- Reports and expenses ---------- */
+async function renderReports() {
+  const day = $("input", { type: "date", value: new Date().toISOString().slice(0, 10) });
+  const out = $("div");
+  const load = async () => {
+    const r = await act(() => api("/api/staff/reports/daily?date=" + day.value)); if (!r) return;
+    out.replaceChildren(
+      $("div", { class: "stats" },
+        stat("Orders", r.orders), stat("Income", money(r.income)), stat("Tax collected", money(r.tax_collected)),
+        stat("Expenses", money(r.expenses)), stat(r.result === "profit" ? "Profit" : "Loss", money(Math.abs(r.net)), r.result === "profit" ? "good" : "bad")),
+      $("h3", {}, "Top items"),
+      r.top_items.length ? r.top_items.map(([n, q]) => $("div", { class: "kv" }, $("span", {}, n), $("span", {}, q + " sold"))) : $("p", { class: "sub" }, "No sales on this day."));
+  };
+  const parts = [$("div", { class: "card" }, $("h2", {}, "Daily report"),
+    $("div", { class: "form" }, day, $("button", { class: "btn", onclick: load }, "Load")), out)];
+  if (can("expense:write")) parts.push(await expenseCard(load));
+  view.replaceChildren(...parts); load();
+}
+const stat = (label, value, cls = "") => $("div", { class: "stat" }, $("span", {}, label), $("b", { class: cls }, String(value)));
+
+async function expenseCard(onSaved) {
+  const cat = $("input", { type: "text", placeholder: "category", list: "cats", maxlength: "40" });
+  const amt = $("input", { class: "n", type: "number", step: "0.01", placeholder: "amount" });
+  const note = $("input", { type: "text", placeholder: "note (optional)" });
+  const list = $("div");
+  const refresh = async () => {
+    const rows = await act(() => api("/api/staff/expenses")) || [];
+    list.replaceChildren(...rows.map(e => $("div", { class: "kv" }, $("span", {}, e.day + " · " + e.category + (e.note ? " · " + e.note : "")), $("span", {}, money(e.amount)))));
+  };
+  await refresh();
+  return $("div", { class: "card" }, $("h2", {}, "Record an expense"),
+    $("datalist", { id: "cats" }, ["supplies", "rent", "utilities", "maintenance", "tax_remittance", "other"].map(c => $("option", { value: c }))),
+    $("div", { class: "form" }, cat, amt, note, $("button", { class: "btn", onclick: async () => {
+      const r = await act(() => api("/api/staff/expenses", "POST", { category: cat.value, amount: amt.value, note: note.value }), "Expense saved");
+      if (r) { cat.value = amt.value = note.value = ""; await refresh(); onSaved(); }
+    } }, "Add")),
+    $("h3", {}, "Recent"), list);
+}
+
+/* ---------- Finance ---------- */
+function kvRows(obj, depth = 0) {
+  return Object.entries(obj).flatMap(([k, v]) => {
+    const label = k.replace(/_/g, " ");
+    if (v && typeof v === "object") return [$("div", { class: "kv" + (depth ? " sub2" : ""), style: "font-weight:600" }, $("span", {}, label)), ...kvRows(v, depth + 1)];
+    return [$("div", { class: "kv" + (depth ? " sub2" : "") }, $("span", {}, label), $("span", {}, typeof v === "number" ? money(v) : String(v)))];
+  });
+}
+async function renderFinance() {
+  const today = new Date().toISOString().slice(0, 10);
+  const start = $("input", { type: "date", value: today.slice(0, 8) + "01" }), end = $("input", { type: "date", value: today });
+  const out = $("div");
+  const load = async () => {
+    const r = await act(() => api("/api/staff/finance?start=" + start.value + "&end=" + end.value)); if (!r) return;
+    out.replaceChildren(
+      $("div", { class: "card" }, $("h2", {}, "Income statement"), ...kvRows(r.income_statement)),
+      $("div", { class: "card" }, $("h2", {}, "Cash flow"), ...kvRows(r.cash_flow)),
+      $("div", { class: "card" }, $("h2", {}, "Balance sheet"), ...kvRows(r.balance_sheet)));
+  };
+  view.replaceChildren($("div", { class: "card" }, $("h2", {}, "Finance statements"),
+    $("div", { class: "form" }, "From", start, "to", end, $("button", { class: "btn", onclick: load }, "Load"))), out);
+  load();
+}
+
+/* ---------- Payroll and employees ---------- */
+async function renderPeople() {
+  const parts = [];
+  if (can("payroll:run")) {
+    const month = $("input", { type: "month", value: new Date().toISOString().slice(0, 7) });
+    parts.push($("div", { class: "card" }, $("h2", {}, "Run payroll"),
+      $("p", { class: "sub" }, "Safe to repeat: employees already paid for a month are skipped."),
+      $("div", { class: "form" }, month, $("button", { class: "btn", onclick: async () => {
+        if (!confirm("Run payroll for " + month.value + "?")) return;
+        const r = await act(() => api("/api/staff/payroll/run", "POST", { month: month.value }));
+        if (r) toast(r.employees_paid + " paid, gross " + money(r.gross_total));
+      } }, "Run payroll"))));
+  }
+  if (can("employee:manage")) {
+    const emps = await act(() => api("/api/staff/employees")) || [];
+    const rows = emps.map(e => {
+      const sal = $("input", { class: "n", type: "number", step: "0.01", value: String(e.monthly_salary) });
+      const tax = $("input", { class: "n", type: "number", step: "0.01", min: "0", max: "1", value: String(e.tax_rate) });
+      const act_ = $("input", { type: "checkbox", checked: e.active });
+      return $("tr", {}, $("td", {}, e.name), $("td", {}, sal), $("td", {}, tax), $("td", {}, act_),
+        $("td", {}, $("button", { class: "btn small", onclick: () => act(() =>
+          api("/api/staff/employees/" + e.id, "PATCH", { monthly_salary: sal.value, tax_rate: tax.value, active: act_.checked }), "Saved " + e.name) }, "Save")));
+    });
+    parts.push($("div", { class: "card" }, $("h2", {}, "Employees"),
+      $("p", { class: "sub" }, "Tax rate is a fraction: 0.10 means 10%."),
+      $("div", { class: "wrap" }, $("table", {}, $("thead", {}, $("tr", {}, ["Name", "Monthly salary", "Tax rate", "Active", ""].map(h => $("th", {}, h)))), $("tbody", {}, rows)))));
+  }
+  view.replaceChildren(...parts);
+}
+
+/* ---------- Shell ---------- */
+const TABS = [
+  { id: "orders", label: "Orders", ok: () => can("order:view_all"), render: renderOrders, live: true },
+  { id: "menu", label: "Menu & stock", ok: () => can("menu:restock") || can("menu:write"), render: renderMenu },
+  { id: "reports", label: "Reports", ok: () => can("report:view"), render: renderReports },
+  { id: "finance", label: "Finance", ok: () => can("finance:view"), render: renderFinance },
+  { id: "people", label: "Payroll & staff", ok: () => can("payroll:run") || can("employee:manage"), render: renderPeople },
+];
+
+function show(id) {
+  clearInterval(timer);
+  tab = TABS.find(t => t.id === id);
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.id === id));
+  tab.render();
+  if (tab.live) timer = setInterval(() => document.hidden || tab.render(), 10000); // keep the board fresh
+}
+
+async function start() {
+  try { me = await api("/api/me"); }
+  catch (e) {
+    view.replaceChildren($("div", { class: "card" }, $("h2", {}, "Please log in"), $("p", { class: "sub" }, "Log in on the menu page, then reopen this page."), $("a", { href: "/" }, "Go to the menu")));
+    return;
+  }
+  const links = [];
+  if (can("order:create")) links.push($("a", { href: "/?menu=1" }, "Take an order"));
+  if (can("role:manage") || can("user:manage")) links.push($("a", { href: "/admin" }, "Roles & users"));
+  document.getElementById("who").replaceChildren(...links, $("span", {}, me.name), $("span", { class: "role" }, me.role));
+  const visible = TABS.filter(t => t.ok());
+  if (!visible.length) {
+    view.replaceChildren($("div", { class: "card" }, $("h2", {}, "No staff tools for your role"), $("p", { class: "sub" }, "Your role has no staff features. An admin can change this."), $("a", { href: "/?menu=1" }, "Go to the menu")));
+    return;
+  }
+  document.getElementById("tabs").replaceChildren(...visible.map(t => $("button", { "data-id": t.id, onclick: () => show(t.id) }, t.label)));
+  show(visible[0].id);
+}
+start();
+</script>
+</body>
+</html>
