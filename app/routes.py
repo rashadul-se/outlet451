@@ -107,7 +107,8 @@ def menu():
 def checkout(u):
     d = request.get_json(force=True)
     o = order_svc.place(u, d.get("items"), d.get("method"), d.get("token"), d.get("redeem_points", 0))
-    return jsonify(order_dict(o), points=u.points), 201
+    return jsonify({**order_dict(o), "points": u.points}), 201
+    
 
 
 @api.get("/orders")
