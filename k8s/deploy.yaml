@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: outlet451}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: outlet451}}
+  template:
+    metadata: {labels: {app: outlet451}}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: web
+          image: registry.example.com/outlet451:1.0.0   # pin by digest in CI
+          ports: [{containerPort: 8000}]
+          env: [{name: SERVICE, value: ordering}]
+          envFrom: [{secretRef: {name: outlet451-secrets}}]   # DATABASE_URL, REDIS_URL, SECRET_KEY, SMTP_*
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 256Mi}}
+          readinessProbe: {httpGet: {path: /healthz, port: 8000}}
+          livenessProbe: {httpGet: {path: /healthz, port: 8000}}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: outlet451}
+spec: {selector: {app: outlet451}, ports: [{port: 80, targetPort: 8000}]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: outlet451-default-deny-ingress}
+spec:
+  podSelector: {matchLabels: {app: outlet451}}
+  policyTypes: [Ingress]
+  ingress: [{ports: [{port: 8000}]}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: outlet451-backoffice}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: outlet451-backoffice}}
+  template:
+    metadata: {labels: {app: outlet451-backoffice}}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: web
+          image: registry.example.com/outlet451:1.0.0   # pin by digest in CI
+          ports: [{containerPort: 8000}]
+          env: [{name: SERVICE, value: backoffice}]
+          envFrom: [{secretRef: {name: outlet451-secrets}}]   # DATABASE_URL, REDIS_URL, SECRET_KEY, SMTP_*
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 256Mi}}
+          readinessProbe: {httpGet: {path: /healthz, port: 8000}}
+          livenessProbe: {httpGet: {path: /healthz, port: 8000}}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes: [{name: tmp, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: outlet451-backoffice}
+spec: {selector: {app: outlet451-backoffice}, ports: [{port: 80, targetPort: 8000}]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: outlet451-backoffice-default-deny-ingress}
+spec:
+  podSelector: {matchLabels: {app: outlet451-backoffice}}
+  policyTypes: [Ingress]
+  ingress: [{ports: [{port: 8000}]}]
+---
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata: {name: outlet451, annotations: {nginx.ingress.kubernetes.io/ssl-redirect: "true"}}
+spec:
+  ingressClassName: nginx
+  tls: [{hosts: [orders.example.com], secretName: outlet451-tls}]
+  rules:
+    - host: orders.example.com
+      http:
+        paths:
+          - {path: /api/admin, pathType: Prefix, backend: {service: {name: outlet451-backoffice, port: {number: 80}}}}
+          - {path: /api/kitchen, pathType: Prefix, backend: {service: {name: outlet451-backoffice, port: {number: 80}}}}
+          - {path: /staff, pathType: Prefix, backend: {service: {name: outlet451-backoffice, port: {number: 80}}}}
+          - {path: /, pathType: Prefix, backend: {service: {name: outlet451, port: {number: 80}}}}
