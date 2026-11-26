@@ -13,9 +13,13 @@ services:
       - {key: ADMIN_EMAIL, sync: false}
       - {key: ADMIN_PASSWORD, sync: false}
       - {key: SMTP_HOST, sync: false}
+      - {key: SMTP_PORT, value: "2525"}
       - {key: SMTP_USER, sync: false}
       - {key: SMTP_PASSWORD, sync: false}
+      - {key: SMTP_FROM, sync: false}
+  - type: keyvalue
+    name: o451-cache
+    plan: free
+    ipAllowList: []
 databases:
   - {name: o451-db, plan: free}
-keyvalue:
-  - {name: o451-cache, plan: free, ipAllowList: []}
