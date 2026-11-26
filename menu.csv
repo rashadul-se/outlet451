@@ -1,0 +1,22 @@
+name,category,description,price,discount_pct,stock
+Soup de Potatoes,Starters,Warm silky potato soup,9,0,50
+Fresh Baby Tomatoes Salad,Starters,Sweet baby tomatoes freshly dressed,10,0,50
+Baconasparagus,Entrée,Tender asparagus wrapped in crisp bacon,13,0,40
+Steak Tartare,Entrée,Hand-cut raw steak classically seasoned,16,0,30
+Toasted Bread,Entrée,Crisp toast topped with shrimp salsa,12,0,40
+Chicken Wings,Entrée,Golden crisp and juicy,12,0,60
+Salmon Tartare,Entrée,Fresh raw salmon light and bright,15,0,30
+Mussels,Entrée,Steamed mussels in a savory broth,14,0,30
+Salmon,Main,Roasted potato and asparagus,28,0,30
+Chicken,Main,Mashed potatoes asparagus and unlimited pasta,24,0,40
+"Steak, 10 ounces",Main,Potatoes tomato salad and unlimited pasta,38,0,25
+Grilled Lamb Chops,Main,French fries and roasted potatoes,36,0,20
+Grilled Shrimp,Main,Greek salad and risotto,30,0,25
+Lasagna,Dessert,Warm layered and comforting,11,0,30
+Flan,Dessert,Smooth caramel custard,9,0,30
+Ginger Tea,Dessert,A soothing spiced finish,5,0,60
+Sangria,Drinks,,9,0,80
+Beer and Vodka Mix,Drinks,,10,0,80
+"Red Wine, 1 glass",Drinks,,12,0,60
+"White Wine, 1 glass",Drinks,,12,0,60
+Evian,Drinks,,5,0,100

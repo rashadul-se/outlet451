@@ -1,0 +1,29 @@
+x-app: &app
+  build: .
+  environment: &env
+    DATABASE_URL: postgresql://o451:o451@db/o451
+    REDIS_URL: redis://cache:6379/0
+    SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY}
+    ADMIN_EMAIL: ${ADMIN_EMAIL:?set}
+    ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set}
+  depends_on: [db, cache]
+services:
+  ordering:
+    <<: *app
+    environment: {<<: *env, SERVICE: ordering, SEED: "1"}
+  backoffice:
+    <<: *app
+    environment: {<<: *env, SERVICE: backoffice}
+    depends_on: [db, cache, ordering]
+  gateway:
+    image: nginx:alpine
+    ports: ["8080:80"]
+    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on: [ordering, backoffice]
+  db:
+    image: postgres:16-alpine
+    environment: {POSTGRES_USER: o451, POSTGRES_PASSWORD: o451, POSTGRES_DB: o451}
+    volumes: [pgdata:/var/lib/postgresql/data]
+  cache:
+    image: redis:7-alpine
+volumes: {pgdata: {}}

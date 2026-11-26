@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: outlet451
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - {key: PROD, value: "1"}
+      - {key: SEED, value: "1"}
+      - {key: SECRET_KEY, generateValue: true}
+      - {key: DATABASE_URL, fromDatabase: {name: o451-db, property: connectionString}}
+      - {key: REDIS_URL, fromService: {type: keyvalue, name: o451-cache, property: connectionString}}
+      - {key: ADMIN_EMAIL, sync: false}
+      - {key: ADMIN_PASSWORD, sync: false}
+      - {key: SMTP_HOST, sync: false}
+      - {key: SMTP_USER, sync: false}
+      - {key: SMTP_PASSWORD, sync: false}
+databases:
+  - {name: o451-db, plan: free}
+keyvalue:
+  - {name: o451-cache, plan: free, ipAllowList: []}
