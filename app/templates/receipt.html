@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Receipt #{{ o.id }}</title>
+<style>body{font:14px system-ui,sans-serif;max-width:360px;margin:20px auto;padding:0 12px}h1{text-align:center;letter-spacing:.2em;font-size:18px}
+td{padding:3px 0}td:last-child{text-align:right}hr{border:0;border-top:1px dashed #94a3b8}button{background:#1d4ed8;color:#fff;border:0;border-radius:10px;padding:10px 16px;width:100%}@media print{button{display:none}}</style>
+<h1>OUTLET 451</h1><p>Receipt #{{ o.id }}<br>{{ o.created_at.strftime('%Y-%m-%d %H:%M') }} UTC<br>Status: {{ o.status }}</p><hr>
+<table width="100%">{% for i in o.items %}<tr><td>{{ i.qty }} x {{ i.item.name }}</td><td>${{ '%.2f'|format(i.qty * i.unit_price) }}</td></tr>{% endfor %}</table><hr>
+<table width="100%"><tr><td>Subtotal</td><td>${{ o.subtotal }}</td></tr><tr><td>Tax (5%)</td><td>${{ o.tax }}</td></tr>
+<tr><td>Points redeemed ({{ o.points_used }})</td><td>-${{ '%.2f'|format(o.points_used * 0.05) }}</td></tr><tr><td><b>Total</b></td><td><b>${{ o.total }}</b></td></tr></table>
+<p>Paid by {{ o.payment_method }} &middot; ref {{ o.payment_ref }}<br>Points earned: {{ o.points_earned }}</p><button onclick="print()">Print</button>

@@ -1,0 +1,45 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Outlet 451 Staff</title><style>
+:root{--b:#1d4ed8;--bd:#1e40af;--g:#64748b;--l:#e2e8f0}*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fff;color:#0f172a}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--l)}h1{font-size:20px;letter-spacing:.2em;margin:0}
+main{max-width:900px;margin:auto;padding:20px}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+button{background:var(--b);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}button:hover{background:var(--bd)}button.o{background:#fff;color:var(--b);border:1px solid var(--b)}
+input,select{padding:10px;border:1px solid var(--l);border-radius:10px;width:100%;margin:4px 0}.row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}.card{border:1px solid var(--l);border-radius:14px;padding:14px;box-shadow:0 1px 3px #0001}
+h2{font-size:15px;color:var(--g);text-transform:uppercase;letter-spacing:.1em}table{border-collapse:collapse;width:100%}td{border-bottom:1px solid var(--l);padding:6px;vertical-align:top}
+#err{color:#b91c1c}.pill{background:#dbeafe;color:var(--bd);border-radius:99px;padding:2px 10px;font-size:12px}@media print{header,nav,button,input{display:none}}
+</style></head><body><header><h1>STAFF</h1><button class="o" onclick="out()">Log out</button></header>
+<main><div id="err"></div><nav id="nav"></nav><div id="view"></div></main><script>
+const $=s=>document.querySelector(s),nxt={placed:'preparing',preparing:'ready',ready:'completed'};let me=null,tab='kitchen';
+const api=async(p,m='GET',b)=>{const r=await fetch('/api/'+p,{method:m,headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)});const d=r.status==204?{}:await r.json();if(!r.ok)throw Error(d.error||'Error');return d};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';'),err=m=>$('#err').textContent=m||'',v=i=>$('#'+i).value;
+const kv=o=>'<table>'+Object.entries(o).map(([k,x])=>`<tr><td>${esc(k.replace(/_/g,' '))}</td><td>${x&&typeof x=='object'?kv(x):esc(x)}</td></tr>`).join('')+'</table>';
+const run=f=>async(...a)=>{try{err();await f(...a)}catch(e){err(e.message)}};
+async function init(){try{me=await api('me')}catch{return login()}if(!['kitchen','admin'].includes(me.role))return login('Staff access only');
+ $('#nav').innerHTML=[['kitchen','Kitchen'],...(me.role=='admin'?[['finance','Finance'],['people','People & payroll'],['menu','Menu']]:[])].map(([k,l])=>`<button class="o" onclick="show('${k}')">${l}</button>`).join('');show(tab)}
+function login(m){$('#nav').innerHTML='';$('#view').innerHTML=`<div class="card"><h2>Staff sign in</h2><input id="e" type="email" placeholder="Email"><input id="p" type="password" placeholder="Password"><button onclick="go()">Sign in</button></div>`;err(m)}
+const go=run(async()=>{await api('login','POST',{email:v('e'),password:v('p')});init()});
+async function out(){await api('logout','POST');login()}
+const show=run(async k=>{tab=k;await {kitchen,finance,people,menu}[k]()});
+async function kitchen(){const[q,inv]=await Promise.all([api('kitchen/orders'),api('kitchen/inventory')]);
+ $('#view').innerHTML=`<h2>Queue</h2><div class="grid">${q.map(o=>`<div class="card"><div class="row"><b>#${o.id}</b><span class="pill">${o.status}</span></div>${o.items.map(i=>`${i.qty} x ${esc(i.name)}`).join('<br>')}<button style="margin-top:8px" onclick="adv(${o.id})">Mark ${nxt[o.status]}</button></div>`).join('')||'<p>No open orders</p>'}</div>
+ <h2>Inventory</h2>${inv.map(i=>`<div class="row"><span>${esc(i.name)} ${i.low?'<span class="pill" style="background:#fee2e2;color:#b91c1c">low</span>':''}</span><span>${i.stock} <input id="r${i.id}" type="number" style="width:80px" placeholder="+qty"> <button class="o" onclick="restock(${i.id})">Add</button></span></div>`).join('')}`}
+const adv=run(async id=>{await api(`kitchen/orders/${id}/advance`,'POST');kitchen()}),restock=run(async id=>{await api(`kitchen/inventory/${id}/restock`,'POST',{qty:+v('r'+id)});kitchen()});
+setInterval(()=>{if(me&&tab=='kitchen'&&!document.activeElement.matches('input'))kitchen().catch(()=>0)},15000);
+function finance(){const t=new Date().toISOString().slice(0,10);
+ $('#view').innerHTML=`<div class="row"><input id="f" type="date" value="${t.slice(0,8)}01"><input id="t" type="date" value="${t}"></div><div class="row">${[['income-statement','Income statement'],['cash-flow','Cash flow'],['balance-sheet','Balance sheet'],['daily','Daily']].map(([k,l])=>`<button class="o" onclick="rep('${k}')">${l}</button>`).join('')}<button onclick="print()">Print</button></div><div id="out"></div>
+ <h2>Record expense</h2><input id="ec" placeholder="Category (rent, utilities, supplies, tax_remittance)"><input id="ea" type="number" step=".01" placeholder="Amount"><input id="en" placeholder="Note"><button onclick="exp()">Save expense</button>`}
+const rep=run(async k=>{const q=k=='balance-sheet'?`?asof=${v('t')}`:k=='daily'?`?date=${v('t')}`:`?from=${v('f')}&to=${v('t')}`;$('#out').innerHTML=kv(await api('admin/reports/'+k+q))}),
+ exp=run(async()=>{await api('admin/expenses','POST',{category:v('ec'),amount:v('ea'),note:v('en')});err('Saved')});
+async function people(){const m=new Date().toISOString().slice(0,7),[es,ps]=await Promise.all([api('admin/employees'),api('admin/payroll?month='+m)]);
+ $('#view').innerHTML=`<h2>Employees</h2>${es.map(e=>`<div class="row"><span>${esc(e.name)} &middot; ${esc(e.position)}</span><span>$${e.salary}/mo</span></div>`).join('')}
+ <input id="en" placeholder="Name"><input id="ep" placeholder="Position"><input id="es" type="number" placeholder="Monthly salary"><input id="et" type="number" step=".01" placeholder="Tax rate (default 0.10)"><button onclick="addEmp()">Add employee</button>
+ <h2>Payroll</h2><div class="row"><input id="pm" type="month" value="${m}"><button onclick="runPay()">Run payroll</button></div>${kv(ps)}
+ <h2>Create staff login</h2><input id="un" placeholder="Name"><input id="ue" type="email" placeholder="Email"><input id="up" type="password" placeholder="Password (8+)"><select id="ur"><option>kitchen</option><option>cashier</option><option>admin</option></select><button onclick="addUser()">Create</button>`}
+const addEmp=run(async()=>{await api('admin/employees','POST',{name:v('en'),position:v('ep'),salary:v('es'),tax_rate:v('et')||0.1});people()}),
+ runPay=run(async()=>{await api('admin/payroll/run','POST',{month:v('pm')});people()}),addUser=run(async()=>{await api('admin/users','POST',{name:v('un'),email:v('ue'),password:v('up'),role:v('ur')});err('Created')});
+async function menu(){const m=await api('menu');$('#view').innerHTML=`<h2>Import CSV</h2><input id="csv" type="file" accept=".csv"><button onclick="imp()">Import</button><h2>Pricing &amp; discounts</h2>
+ ${m.map(i=>`<div class="row"><span>${esc(i.name)}</span><span><input id="p${i.id}" type="number" step=".01" value="${i.price}" style="width:90px"> <input id="d${i.id}" type="number" value="${i.discount_pct}" style="width:70px">% <button class="o" onclick="sv(${i.id})">Save</button></span></div>`).join('')}`}
+const sv=run(async i=>{await api('admin/menu/'+i,'PATCH',{price:v('p'+i),discount_pct:v('d'+i)});err('Saved')}),
+ imp=run(async()=>{const f=$('#csv').files[0];if(!f)return;const r=await fetch('/api/admin/menu/import',{method:'POST',body:await f.text()}),d=await r.json();if(!r.ok)throw Error(d.error);err('Imported '+d.imported);menu()});
+init();
+</script></body></html>
